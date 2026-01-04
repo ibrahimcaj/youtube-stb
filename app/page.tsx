@@ -134,9 +134,9 @@ export default function Home() {
                     onCurrentTimeChange={setCurrentTime}
                 />
 
-                <div className="w-full md:w-auto flex flex-col md:flex-row justify-between items-center overflow-hidden">
+                <div className="w-full md:w-auto flex flex-col md:flex-row justify-between items-center">
                     <div className="w-full md:w-auto flex flex-row justify-center items-center overflow-x-auto">
-                        {/* <div className="w-full flex flex-row gap-2">
+                        {/* <div className="flex flex-row gap-2">
                     {before.map((video) => (
                         <VideoCard
                             key={video.id}
@@ -145,7 +145,7 @@ export default function Home() {
                         />
                     ))}
                 </div> */}
-                        <div className="w-full flex flex-row gap-2 ml-6">
+                        <div className="relative flex flex-row gap-2 ml-6 flex-shrink-0">
                             <div
                                 className="absolute flex w-[1px] h-[128px] bg-red-500 rounded-lg"
                                 style={{
@@ -159,11 +159,11 @@ export default function Home() {
                                 video={currentVideo}
                             />
                         </div>
-                        <div className="w-full flex flex-row items-center gap-2">
+                        <div className="flex flex-row items-center gap-2 flex-shrink-0">
                             {after.map((video) => (
                                 <VideoCard key={video.id} video={video} />
                             ))}
-                            <div className="flex flex-col items-center ml-8">
+                            <div className="flex flex-col items-center mx-4">
                                 <div className="flex-row">
                                     <ChevronRight
                                         size={12}
@@ -256,7 +256,7 @@ function VideoCard({
     classNames?: string;
 }) {
     return (
-        <div className="w-[128px] flex flex-col p-1">
+        <div className="w-[128px] flex-shrink-0 flex flex-col p-1">
             <img
                 src={video.thumbnail.medium.url}
                 alt={video.title}
