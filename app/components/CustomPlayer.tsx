@@ -44,7 +44,10 @@ export default function CustomPlayer({
         console.log("Player ready!");
         setIsReady(true);
         setDuration(playerRef.current.getDuration());
+        lastValidTimeRef.current = 0;
     };
+
+    const lastValidTimeRef = useRef<number>(0);
 
     const onPlayerStateChange = (event: unknown) => {
         const state = event.data;
@@ -57,6 +60,8 @@ export default function CustomPlayer({
             onVideoEnd?.();
         }
     };
+
+
 
     const initPlayer = () => {
         if (playerRef.current || !containerRef.current) return;
@@ -72,9 +77,10 @@ export default function CustomPlayer({
             },
             playerVars: {
                 autoplay: 0,
-                controls: 0,
+                controls: 1,
                 modestbranding: 1,
                 rel: 0,
+                fs: 0,
             },
         });
     };
@@ -151,6 +157,8 @@ export default function CustomPlayer({
     useEffect(() => {
         if (initialTime > 0 && isReady && playerRef.current) {
             playerRef.current.seekTo(initialTime);
+            // Update the valid time reference so seek prevention doesn't block this
+            lastValidTimeRef.current = initialTime;
         }
     }, [initialTime, isReady]);
 
@@ -202,15 +210,16 @@ export default function CustomPlayer({
         >
             <div
                 ref={containerRef}
-                className="pointer-events-none"
                 style={{ width: "100%", height: "100%" }}
             />
 
-            {/* Overlay to prevent iframe interaction */}
-            <div
-                className="absolute inset-0 pointer-events-auto"
-                style={{ zIndex: 10 }}
-            />
+            {/* Overlay to block progress bar and control interactions when playing */}
+            {isPlaying && (
+                <div
+                    className="absolute inset-0 pointer-events-auto"
+                    style={{ zIndex: 15 }}
+                />
+            )}
 
             {/* Custom Controls */}
             <div
