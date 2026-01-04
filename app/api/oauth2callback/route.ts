@@ -13,17 +13,21 @@ if (!mongoUri || !dbName || !googleClientID || !googleClientSecret) {
     );
 }
 
-// configure the OAuth2 client
+// Configure the OAuth2 client
 const oauth2Client = new google.auth.OAuth2(
     googleClientID!,
     googleClientSecret!,
     "http://localhost:3000/api/oauth2callback"
 );
 
+// TODO: Allow creation of more profiles
+// GET /api/oauth2callback
+// 1. Receives the OAuth2 callback with authorization code
+// 2. Exchanges the code for access and refresh tokens
+// 3. Stores the tokens in the only profile document in MongoDB
 export async function GET(request: Request) {
     const client = new MongoClient(mongoUri!);
     const { code } = Object.fromEntries(new URL(request.url).searchParams);
-    console.log("OAuth2 code received:", code);
 
     try {
         const { tokens } = await oauth2Client.getToken(code);
@@ -38,7 +42,6 @@ export async function GET(request: Request) {
             { upsert: true }
         );
 
-        console.log("Authentication successful!", tokens);
         return Response.json({ message: "Authentication successful!" });
     } catch (error) {
         console.error("Error getting token:", error);
