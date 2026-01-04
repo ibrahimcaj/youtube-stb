@@ -1,21 +1,71 @@
 import { MongoClient } from "mongodb";
 import { google } from "googleapis";
-import { Subscription } from "../subscriptions/route";
-import { refreshTokenIfNeeded, createOAuth2Client } from "@/lib/authUtils";
+import { refreshTokenIfNeeded } from "@/lib/authUtils";
+
+type ChannelListRequest = {
+    part: string[];
+    id: string[];
+};
+
+type SearchListRequest = {
+    part: string[];
+    channelId: string;
+    type: string[];
+    maxResults?: number;
+    order?: string;
+};
+
+type VideoListRequest = {
+    part: string[];
+    id: string[];
+};
+
+type ChannelListResponse = {
+    data: {
+        items?: Array<{
+            contentDetails?: {
+                relatedPlaylists?: {
+                    uploads?: string;
+                };
+            };
+        }>;
+    };
+};
+
+type SearchListResponse = {
+    data: {
+        items: Array<{
+            id: { videoId: string };
+            snippet: {
+                title: string;
+                description?: string;
+                publishedAt: string;
+                channelId: string;
+                thumbnails: Record<string, { url: string }>;
+            };
+        }>;
+    };
+};
+
+type VideoListResponse = {
+    data: {
+        items?: Array<{
+            id: string;
+            contentDetails?: {
+                duration: string;
+            };
+        }>;
+    };
+};
 
 export interface Video {
-    title: string;
-    channelTitle: string;
-    publishedAt: string;
     id: string;
-    videoId: string;
-    thumbnail: {
-        default: { url: string };
-        medium: { url: string };
-        high: { url: string };
-        standard?: { url: string };
-        maxres?: { url: string };
-    };
+    title: string;
+    description?: string;
+    publishedAt: number;
+    channelId: string;
+    channelTitle: string;
+    thumbnail: Record<string, { url: string }>;
     duration: number;
 }
 
@@ -31,9 +81,14 @@ if (!mongoUri || !dbName || !googleClientID || !googleClientSecret) {
     );
 }
 
-// configure the OAuth2 client
-const oauth2Client = createOAuth2Client();
-
+// TODO: See if we can optimise this to call the API less often, could be a way to fetch duration along with playlist items?
+// TODO: Also see if we can save upload playlist in the sub object
+// GET /api/feed
+// 1. Fetches user's subscriptions (explicitly enabled) from database
+// 2. For each subscription, fetches uploads playlist from the API
+// 3. Fetches each video's details from the uploads playlist, to extract duration
+// 4. Saves/updates video details in the database
+// 5. Returns the list of videos as JSON response
 export async function GET() {
     const client = new MongoClient(mongoUri!);
 
@@ -41,16 +96,17 @@ export async function GET() {
         await client.connect();
         const db = client.db(dbName);
 
-        // Refresh token if needed
+        // Refresh the access token if needed
         const authenticatedOAuth2Client = await refreshTokenIfNeeded();
 
-        const docs = await db
+        const subscriptions = await db
             .collection("subscriptions")
             .find({
-                enabled: true,
+                enabled: true, // Only fetch explicitly enabled subscriptions
             })
             .toArray();
 
+        // Initialize the YouTube API client
         const youtube = google.youtube({
             version: "v3",
             auth: authenticatedOAuth2Client,
@@ -65,21 +121,22 @@ export async function GET() {
             };
         }[] = [];
 
-        for (const subscription of docs) {
+        for (const subscription of subscriptions) {
             const channelId = subscription.channelId;
             const channelTitle = subscription.title;
 
             try {
-                const channelResponse = await youtube.channels.list({
-                    // @ts-expect-error -- IGNORE --
-                    part: "contentDetails",
-                    id: channelId,
-                });
+                // Get the uploads playlist ID of the channel
+                const channelsRequest: ChannelListRequest = {
+                    part: ["contentDetails"],
+                    id: [channelId],
+                };
+                const channelResponse = (await youtube.channels.list(
+                    channelsRequest
+                )) as ChannelListResponse;
 
-                // @ts-expect-error -- IGNORE --
-                if (channelResponse.data.items?.[0]) {
+                if (channelResponse.data.items?.[0]?.contentDetails) {
                     const uploadsPlaylistId =
-                        // @ts-expect-error -- IGNORE --
                         channelResponse.data.items[0].contentDetails
                             .relatedPlaylists?.uploads;
 
@@ -90,94 +147,108 @@ export async function GET() {
                         continue;
                     }
 
-                    // Get videos from the uploads playlist, filtering out shorts
-                    const videosResponse = await youtube.search.list({
-                        // @ts-expect-error -- IGNORE --
-                        part: "snippet",
+                    // Get videos from the channel's uploads playlist
+                    const searchRequest: SearchListRequest = {
+                        part: ["snippet"],
                         channelId: channelId,
-                        type: "video",
+                        type: ["video"],
                         maxResults: 5,
                         order: "date",
-                    });
+                    };
 
-                    // @ts-expect-error -- IGNORE --
-                    console.log(videosResponse.data.items);
+                    // @ts-expect-error - googleapis library type definitions don't match for some reason
+                    const videosResponse = (await youtube.search.list(
+                        searchRequest
+                    )) as SearchListResponse;
 
-                    // @ts-expect-error -- IGNORE --
                     if (videosResponse.data.items) {
-                        // Get video IDs
-
-                        // @ts-expect-error -- IGNORE --
+                        // Extract the video IDs from the response items
                         const videoIds = videosResponse.data.items.map(
-                            // @ts-expect-error -- IGNORE --
-                            (item) => item.id.videoId
+                            (item: { id: { videoId: string } }) =>
+                                item.id.videoId
                         );
 
                         // Fetch video details to get duration
-                        const videoDetailsResponse = await youtube.videos.list({
-                            // @ts-expect-error -- IGNORE --
-                            part: "contentDetails",
-                            id: videoIds.join(","),
-                        });
+                        const videosRequest: VideoListRequest = {
+                            part: ["contentDetails"],
+                            id: videoIds,
+                        };
+                        const videoDetailsResponse = (await youtube.videos.list(
+                            videosRequest
+                        )) as VideoListResponse;
 
                         // Create a map of video IDs to durations
                         const durationMap: { [key: string]: number } = {};
 
-                        // @ts-expect-error -- IGNORE --
-                        videoDetailsResponse.data.items?.forEach((item) => {
-                            const match = item.contentDetails.duration.match(
-                                /PT(\d+H)?(\d+M)?(\d+S)?/
-                            );
+                        videoDetailsResponse.data.items?.forEach(
+                            (item: {
+                                id?: string;
+                                contentDetails?: { duration?: string };
+                            }) => {
+                                if (!item.contentDetails?.duration) return;
+                                const match =
+                                    item.contentDetails.duration.match(
+                                        /PT(\d+H)?(\d+M)?(\d+S)?/
+                                    );
 
-                            const hours = parseInt(match?.[1]) || 0;
-                            const minutes = parseInt(match?.[2]) || 0;
-                            const seconds = parseInt(match?.[3]) || 0;
-                            const totalSeconds =
-                                hours * 3600 + minutes * 60 + seconds;
-                            durationMap[item.id] = totalSeconds;
+                                const hours = parseInt(match?.[1] || "0") || 0;
+                                const minutes =
+                                    parseInt(match?.[2] || "0") || 0;
+                                const seconds =
+                                    parseInt(match?.[3] || "0") || 0;
+                                const totalSeconds =
+                                    hours * 3600 + minutes * 60 + seconds;
+                                if (item.id) {
+                                    durationMap[item.id] = totalSeconds;
+                                }
+                            }
+                        );
 
-                            console.log(
-                                "1231231231321",
-                                match,
-                                totalSeconds,
-                                item
-                            );
-                        });
+                        // For each video item, construct the Video object to push into database,
+                        // ...and prepare the MongoDB update object
+                        videosResponse.data.items.forEach(
+                            (item: {
+                                id: { videoId: string };
+                                snippet: {
+                                    title: string;
+                                    description?: string;
+                                    publishedAt: string;
+                                    channelId: string;
+                                    thumbnails: Record<string, { url: string }>;
+                                };
+                            }) => {
+                                const videoDuration =
+                                    durationMap[item.id.videoId] || 0;
 
-                        // @ts-expect-error -- IGNORE --
-                        videosResponse.data.items.forEach((item) => {
-                            const videoDuration =
-                                durationMap[item.id.videoId] || 0;
+                                const video: Video = {
+                                    id: item.id.videoId,
 
-                            const video: Video = {
-                                id: item.id.videoId,
+                                    title: item.snippet.title,
+                                    description: item.snippet.description,
 
-                                title: item.snippet.title,
-                                description: item.snippet.description,
+                                    publishedAt: Math.floor(
+                                        new Date(
+                                            item.snippet.publishedAt
+                                        ).getTime() / 1000
+                                    ),
 
-                                // @ts-expect-error -- IGNORE --
-                                publishedAt: Math.floor(
-                                    new Date(
-                                        item.snippet.publishedAt
-                                    ).getTime() / 1000
-                                ),
+                                    channelId: item.snippet.channelId,
+                                    channelTitle: channelTitle,
 
-                                channelId: item.snippet.channelId,
-                                channelTitle: channelTitle,
+                                    thumbnail: item.snippet.thumbnails,
+                                    duration: videoDuration,
+                                };
+                                videos.push(video);
 
-                                thumbnail: item.snippet.thumbnails,
-                                duration: videoDuration,
-                            };
-                            videos.push(video);
-
-                            feedUpdates.push({
-                                updateOne: {
-                                    filter: { id: video.id },
-                                    update: { $set: video },
-                                    upsert: true,
-                                },
-                            });
-                        });
+                                feedUpdates.push({
+                                    updateOne: {
+                                        filter: { id: video.id },
+                                        update: { $set: video },
+                                        upsert: true,
+                                    },
+                                });
+                            }
+                        );
                     }
                 }
             } catch (error) {
