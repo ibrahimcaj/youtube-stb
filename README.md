@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# YouTube STB
 
-## Getting Started
+Your YouTube subscription feed reimagined as a constantly streaming TV channel.
 
-First, run the development server:
+Name is derived from the old STB (Set Top Box) devices used for watching TV channels.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Why?
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This idea came from spending too much time looking through my YouTube feed trying to find something to watch, and noticing I'd become overly indecisive about what to watch.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How does it work?
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The application uses the YouTube API to fetch your subscriptions and aggregate videos from channels you select.
 
-## Learn More
+It organizes these videos into a queue and simulates a TV guide. Based on a defined start epoch & video durations, it determines which video should be playing at any given moment.
 
-To learn more about Next.js, take a look at the following resources:
+This is currently a personal proof-of-concept that I self-host myself. If you'd like to self-host/contribute to/test it yourself, see below.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## TODOs
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Auto-clean timeline
+    - Currently, the videos get infinitely aggregated into the collection. This will cause performance issues withing a few days of aggregating videos.
+2. Create a profile manager
+    - Add a way to create and manage profiles for multiple YouTube users.
+3. Authentification through the frontend
 
-## Deploy on Vercel
+## Development
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+_Note: For this project, I've used `pnpm` as the package manager, but it should work with any other cross-compatible package manager as well._
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Requirements:
+
+-   **YouTube API OAuth client**
+    -   Make sure YouTube API is enabled for your Google Cloud project under [Enabled APIs and services](https://console.cloud.google.com/apis/dashboard)
+    -   Create a YouTube OAuth2 Client on the [Credentials page](https://console.cloud.google.com/apis/api/youtube.googleapis.com/credentials)
+    -   Add yourself as a test user on the Auth Platform's [Audience page](https://console.cloud.google.com/auth/audience) (this is required for non-verified clients)
+-   **MongoDB cluster**
+    -   You will need the _connection string_ & _database name_ you are going to use.
+
+Initial setup:
+
+-   Add `MONGODB_URI`, `MONGODB_DB`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` to your environment variables.
+-   Run `pnpm i` to fetch all of the dependencies
+-   `pnpm dev` to start the Next.js server
+
+You should be all set!
