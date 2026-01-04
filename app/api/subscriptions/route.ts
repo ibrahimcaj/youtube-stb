@@ -1,43 +1,15 @@
 import { MongoClient } from "mongodb";
 import { google } from "googleapis";
-import { refreshTokenIfNeeded, createOAuth2Client } from "@/lib/authUtils";
-
-interface Thumbnail {
-    url: string;
-}
-
-interface ResourceId {
-    kind: string;
-    channelId: string;
-}
-
-interface Snippet {
-    publishedAt: string;
-    title: string;
-    description: string;
-    resourceId: ResourceId;
-    channelId: string;
-    thumbnails: {
-        default: Thumbnail;
-        medium: Thumbnail;
-        high: Thumbnail;
-    };
-}
-
-interface ContentDetails {
-    totalItemCount: number;
-    newItemCount: number;
-    activityType: string;
-}
+import { refreshTokenIfNeeded } from "@/lib/authUtils";
 
 export interface Subscription {
     id: string;
     channelId: string;
     title: string;
     thumbnails: {
-        default: Thumbnail;
-        medium: Thumbnail;
-        high: Thumbnail;
+        default: { url: string };
+        medium: { url: string };
+        high: { url: string };
     };
     enabled: boolean;
 }
@@ -45,18 +17,14 @@ export interface Subscription {
 const mongoUri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_DB;
 
-const googleClientID = process.env.GOOGLE_CLIENT_ID;
-const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-
-if (!mongoUri || !dbName || !googleClientID || !googleClientSecret) {
+if (!mongoUri || !dbName) {
     throw new Error(
         "Missing MongoDB connection string, database name, or Google OAuth credentials"
     );
 }
 
-// configure the OAuth2 client
-const oauth2Client = createOAuth2Client();
-
+// GET /api/subscriptions
+// Returns all subscriptions from the database
 export async function GET() {
     const client = new MongoClient(mongoUri!);
 
@@ -102,32 +70,30 @@ export async function POST() {
         let nextPageToken: string | undefined;
 
         do {
+            // Fetch subscriptions page
             const subsResponse = await youtube.subscriptions.list({
-                // @ts-expect-error -- IGNORE --
-                part: "snippet,contentDetails",
+                part: ["snippet", "contentDetails"],
                 mine: true,
                 maxResults: 50,
                 pageToken: nextPageToken,
             });
 
-            // @ts-expect-error -- IGNORE --
             if (subsResponse.data.items) {
-                // @ts-expect-error -- IGNORE --
-                const newItems = subsResponse.data.items.map(
-                    (item: { id: string; snippet: Snippet }) => ({
-                        id: item.id,
-                        channelId: item.snippet.resourceId.channelId,
-                        title: item.snippet.title,
-                        thumbnails: item.snippet.thumbnails,
-                    })
-                ) as Subscription[];
+                const newItems = subsResponse.data.items.map((item) => ({
+                    id: item.id as string,
+                    channelId: item.snippet!.resourceId!.channelId as string,
+                    title: item.snippet!.title,
+                    thumbnails: item.snippet!.thumbnails,
+                })) as Subscription[];
+
                 subscriptions.push(...newItems);
             }
 
-            // @ts-expect-error -- IGNORE --
-            nextPageToken = subsResponse.data.nextPageToken;
+            // Prepare for next page
+            nextPageToken = subsResponse.data.nextPageToken ?? undefined;
         } while (nextPageToken);
 
+        // Prepare MongoDB update objects
         const updates = subscriptions.map((sub) => ({
             updateOne: {
                 filter: { id: sub.id },
@@ -136,6 +102,7 @@ export async function POST() {
             },
         }));
 
+        // Apply bulk updates
         await db.collection("subscriptions").bulkWrite(updates);
 
         return Response.json({
