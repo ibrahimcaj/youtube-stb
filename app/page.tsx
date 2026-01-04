@@ -134,8 +134,8 @@ export default function Home() {
                     onCurrentTimeChange={setCurrentTime}
                 />
 
-                <div className="w-full md:w-auto flex flex-col md:flex-row justify-between items-center">
-                    <div className="w-full md:w-auto flex flex-row justify-center items-center overflow-x-auto">
+                <div className="w-auto md:w-full flex flex-col md:flex-row justify-between items-center">
+                    <div className="w-screen md:w-full flex flex-row items-center overflow-x-scroll">
                         {/* <div className="flex flex-row gap-2">
                     {before.map((video) => (
                         <VideoCard
@@ -145,7 +145,7 @@ export default function Home() {
                         />
                     ))}
                 </div> */}
-                        <div className="relative flex flex-row gap-2 ml-6 flex-shrink-0">
+                        <div className="relative flex flex-row gap-2 flex-shrink-0">
                             <div
                                 className="absolute flex w-[1px] h-[128px] bg-red-500 rounded-lg"
                                 style={{
@@ -185,7 +185,7 @@ export default function Home() {
                         </div>
                     </div>
 
-                    <div className="flex flex-row items-center gap-2 mr-6 my-12">
+                    <div className="flex flex-row items-center gap-2 mr-6 my-12 px-6">
                         <SidebarTrigger>
                             <Users />
                         </SidebarTrigger>
@@ -202,14 +202,8 @@ export default function Home() {
                 </div>
             </div>
 
-            <Sidebar
-                side="right"
-                className="p-4 pb-8 overflow-y-scroll overflow-x-hidden"
-                defaultValue={0}
-            >
-                <div className="w-80 mb-4">Subscriptions</div>
-
-                <div className="flex flex-col gap-2 pb-4">
+            <Sidebar side="right" defaultValue={0}>
+                <div className="flex flex-col gap-2 p-4 overflow-y-scroll overflow-x-hidden">
                     {subscriptions.map((sub) => (
                         <Item
                             variant="outline"
