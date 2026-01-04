@@ -1,8 +1,6 @@
 import { MongoClient } from "mongodb";
-import { google } from "googleapis";
-import { Subscription } from "../subscriptions/route";
 import { Video } from "../feed/route";
-import { refreshTokenIfNeeded, createOAuth2Client } from "@/lib/authUtils";
+import { Subscription } from "../subscriptions/route";
 
 const mongoUri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_DB;
@@ -15,9 +13,6 @@ if (!mongoUri || !dbName || !googleClientID || !googleClientSecret) {
         "Missing MongoDB connection string, database name, or Google OAuth credentials"
     );
 }
-
-// configure the OAuth2 client
-const oauth2Client = createOAuth2Client();
 
 function getVideoAtEpoch(
     videos: Video[],
@@ -59,9 +54,6 @@ export async function GET(request: Request) {
         await client.connect();
         const db = client.db(dbName);
 
-        // Refresh token if needed
-        const authenticatedOAuth2Client = await refreshTokenIfNeeded();
-
         const url = new URL(request.url);
         const epoch =
             parseInt(url.searchParams.get("epoch") || "0") ||
@@ -77,22 +69,22 @@ export async function GET(request: Request) {
             );
         }
 
-        const docs = await db
-            .collection("subscriptions")
+        // Fetch all enabled subscriptions
+        const subscriptions = await db
+            .collection<Subscription>("subscriptions")
             .find({
                 enabled: true,
             })
             .toArray();
 
-        // @ts-expect-error -- IGNORE --
-        const videos: Video[] = (await db
-            .collection("feed")
+        // Fetch all videos from enabled subscriptions
+        const videos = await db
+            .collection<Video>("feed")
             .find({
-                channelId: { $in: docs.map((sub) => sub.channelId) },
+                channelId: { $in: subscriptions.map((sub) => sub.channelId) },
             })
             .sort({ publishedAt: -1 })
-            .toArray()) as Video[];
-        console.log(videos);
+            .toArray();
 
         // If no videos, indicate feed needs to be refreshed
         if (videos.length === 0) {
@@ -102,14 +94,10 @@ export async function GET(request: Request) {
             );
         }
 
-        const youtube = google.youtube({
-            version: "v3",
-            auth: authenticatedOAuth2Client,
-        });
-
+        // Find the current video at the given epoch
         let currentVideo = getVideoAtEpoch(videos, epoch, startTime);
 
-        // If no current video (epoch is beyond all videos), return the last video at timestamp 0
+        // If no current video (epoch is after all videos), return the last video at timestamp 0
         if (!currentVideo) {
             const lastVideo = videos[videos.length - 1];
             currentVideo = {
@@ -138,6 +126,7 @@ export async function GET(request: Request) {
                 currentVideo.currentIndex + 1,
                 afterEndIndex
             );
+
             // Total count of all videos after the current video
             totalAfterCount = videos.length - currentVideo.currentIndex - 1;
         }
