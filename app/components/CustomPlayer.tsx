@@ -13,6 +13,7 @@ interface CustomPlayerProps {
     onVideoEnd?: () => void;
     currentVideoTime?: React.MutableRefObject<number>;
     onCurrentTimeChange?: (time: number) => void;
+    onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
 declare global {
@@ -28,6 +29,7 @@ export default function CustomPlayer({
     onVideoEnd,
     currentVideoTime,
     onCurrentTimeChange,
+    onFullscreenChange,
 }: CustomPlayerProps) {
     const playerRef = useRef<unknown>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -210,11 +212,37 @@ export default function CustomPlayer({
         if (!fullscreenContainerRef.current) return;
 
         if (!isFullscreen) {
-            fullscreenContainerRef.current.requestFullscreen?.();
+            const elem = fullscreenContainerRef.current;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(() => {
+                    // Fallback for mobile or restricted fullscreen
+                    setIsFullscreen(true);
+                    onFullscreenChange?.(true);
+                });
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.webkitEnterFullscreen) {
+                elem.webkitEnterFullscreen();
+            } else {
+                // Fallback for environments where fullscreen is not supported
+                setIsFullscreen(true);
+                onFullscreenChange?.(true);
+            }
             setIsFullscreen(true);
+            onFullscreenChange?.(true);
         } else {
-            document.exitFullscreen?.();
+            if (
+                document.fullscreenElement ||
+                document.webkitFullscreenElement
+            ) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
             setIsFullscreen(false);
+            onFullscreenChange?.(false);
         }
     };
 
@@ -239,7 +267,7 @@ export default function CustomPlayer({
 
             {/* Custom Controls */}
             <div
-                className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/50 to-transparent transition-opacity duration-300 ${
+                className={`absolute bottom-0 left-0 right-0 bg-linear-to-t from-black via-black/50 to-transparent transition-opacity duration-300 ${
                     isShowingControls ? "opacity-100" : "opacity-0"
                 }`}
                 style={{ zIndex: 20 }}

@@ -23,7 +23,6 @@ import { Item } from "@/components/ui/item";
 
 export default function Home() {
     const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
-    const [before, setBefore] = useState<Video[]>([]);
     const [after, setAfter] = useState<Video[]>([]);
     const [startTime, setStartTime] = useState<number>(0);
     const [currentTime, setCurrentTime] = useState(0);
@@ -32,6 +31,7 @@ export default function Home() {
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [loadingStatus, setLoadingStatus] = useState("Fetching timeline...");
+    const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false);
 
     const currentVideoTime = useRef(0);
 
@@ -56,7 +56,6 @@ export default function Home() {
                 console.log(data.current.timestamp);
                 setCurrentVideo(data.current?.video || null);
                 setStartTime(data.current.timestamp);
-                setBefore(data.before || []);
                 setAfter(data.after || []);
                 setAfterCount(data.afterCount || 0);
                 setLoadingStatus("Loaded");
@@ -106,15 +105,12 @@ export default function Home() {
 
     const handleVideoEnd = () => {
         if (after.length > 0) {
-            const nextVideo = after[0];
-
             // Refetch the timeline with the next video
             fetch(`/api/timeline`)
                 .then((response) => response.json())
                 .then((data) => {
                     setCurrentVideo(data.current?.video || null);
                     setStartTime(data.current.timestamp);
-                    setBefore(data.before || []);
                     setAfter(data.after || []);
                 })
                 .catch((error) =>
@@ -132,9 +128,14 @@ export default function Home() {
                     onVideoEnd={handleVideoEnd}
                     currentVideoTime={currentVideoTime}
                     onCurrentTimeChange={setCurrentTime}
+                    onFullscreenChange={setIsPlayerFullscreen}
                 />
 
-                <div className="w-auto md:w-full flex flex-col md:flex-row justify-between items-center group">
+                <div
+                    className={`w-auto md:w-full flex flex-col md:flex-row justify-between items-center group ${
+                        isPlayerFullscreen ? "hidden" : ""
+                    }`}
+                >
                     <div className="w-screen md:w-full flex flex-row items-center overflow-x-scroll transition-opacity duration-300 opacity-100 md:opacity-0 md:group-hover:opacity-100">
                         {/* <div className="flex flex-row gap-2">
                     {before.map((video) => (
@@ -145,9 +146,9 @@ export default function Home() {
                         />
                     ))}
                 </div> */}
-                        <div className="relative flex flex-row gap-2 flex-shrink-0">
+                        <div className="relative flex flex-row gap-2 shrink-0">
                             <div
-                                className="absolute flex w-[1px] h-[128px] bg-red-500 rounded-lg"
+                                className="absolute flex w-px h-32 bg-red-500 rounded-lg"
                                 style={{
                                     translate:
                                         128 *
@@ -159,7 +160,7 @@ export default function Home() {
                                 video={currentVideo}
                             />
                         </div>
-                        <div className="flex flex-row items-center gap-2 flex-shrink-0">
+                        <div className="flex flex-row items-center gap-2 shrink-0">
                             {after.map((video) => (
                                 <VideoCard key={video.id} video={video} />
                             ))}
@@ -250,7 +251,7 @@ function VideoCard({
     classNames?: string;
 }) {
     return (
-        <div className="w-[128px] flex-shrink-0 flex flex-col p-1">
+        <div className="w-32 shrink-0 flex flex-col p-1">
             <img
                 src={video.thumbnail.medium.url}
                 alt={video.title}
