@@ -134,8 +134,8 @@ export default function Home() {
                     onCurrentTimeChange={setCurrentTime}
                 />
 
-                <div className="w-auto md:w-full flex flex-col md:flex-row justify-between items-center">
-                    <div className="w-screen md:w-full flex flex-row items-center overflow-x-scroll">
+                <div className="w-auto md:w-full flex flex-col md:flex-row justify-between items-center group">
+                    <div className="w-screen md:w-full flex flex-row items-center overflow-x-scroll transition-opacity duration-300 opacity-100 md:opacity-0 md:group-hover:opacity-100">
                         {/* <div className="flex flex-row gap-2">
                     {before.map((video) => (
                         <VideoCard

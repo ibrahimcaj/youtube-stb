@@ -4,7 +4,8 @@
 
 import { useRef, useState, useEffect } from "react";
 import { Video } from "../api/feed/route";
-import { Loader2 } from "lucide-react";
+import { Loader2, Maximize } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface CustomPlayerProps {
     video: Video;
@@ -34,6 +35,8 @@ export default function CustomPlayer({
     const [duration, setDuration] = useState(0);
     const [played, setPlayed] = useState(0);
     const [isShowingControls, setIsShowingControls] = useState(true);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const fullscreenContainerRef = useRef<HTMLDivElement>(null);
 
     // @ts-expect-error -- IGNORE --
     const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -154,9 +157,12 @@ export default function CustomPlayer({
     // Seek on initialTime
     useEffect(() => {
         if (initialTime > 0 && isReady && playerRef.current) {
-            playerRef.current.seekTo(initialTime);
             // Update the valid time reference so seek prevention doesn't block this
-            lastValidTimeRef.current = initialTime;
+            // Move assignment before effect runs to avoid modifying a value used in effect dependencies
+            (() => {
+                lastValidTimeRef.current = initialTime;
+            })();
+            playerRef.current.seekTo(initialTime);
         }
     }, [initialTime, isReady]);
 
@@ -200,9 +206,24 @@ export default function CustomPlayer({
         }
     };
 
+    const toggleFullscreen = () => {
+        if (!fullscreenContainerRef.current) return;
+
+        if (!isFullscreen) {
+            fullscreenContainerRef.current.requestFullscreen?.();
+            setIsFullscreen(true);
+        } else {
+            document.exitFullscreen?.();
+            setIsFullscreen(false);
+        }
+    };
+
     return (
         <div
-            className="relative w-full bg-black aspect-video overflow-hidden group"
+            ref={fullscreenContainerRef}
+            className={`relative bg-black overflow-hidden group ${
+                isFullscreen ? "fixed inset-0 z-50" : "w-full aspect-video"
+            }`}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => !isPlaying && setIsShowingControls(false)}
         >
@@ -223,6 +244,18 @@ export default function CustomPlayer({
                 }`}
                 style={{ zIndex: 20 }}
             >
+                {/* Control Buttons */}
+                <div className="flex items-center justify-end gap-2 p-4">
+                    <Button
+                        onClick={toggleFullscreen}
+                        variant="ghost"
+                        size="icon"
+                        className="hover:bg-white/20 text-white"
+                        aria-label="Toggle fullscreen"
+                    >
+                        <Maximize size={20} />
+                    </Button>
+                </div>
                 {/* Progress Bar */}
                 <div className="h-2 w-32 bg-red-30 z-20"></div>
             </div>
