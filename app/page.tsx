@@ -163,13 +163,20 @@ export default function Home() {
                         />
                     ))}
                 </div> */}
-                        <div className="relative flex flex-row gap-2 shrink-0">
+                        <div className="relative inline-block w-32">
                             <div
-                                className="absolute flex w-px h-32 bg-red-500 rounded-lg"
+                                className="absolute flex w-px h-32 bg-red-500 rounded-lg pointer-events-none"
                                 style={{
-                                    translate:
-                                        128 *
-                                        (currentTime / currentVideo.duration),
+                                    left: `${Math.max(
+                                        0,
+                                        Math.min(
+                                            100,
+                                            (currentTime /
+                                                currentVideo.duration) *
+                                                100
+                                        )
+                                    )}%`,
+                                    top: 0,
                                 }}
                             ></div>
                             <VideoCard

@@ -13,6 +13,7 @@ interface CustomPlayerProps {
     onVideoEnd?: () => void;
     currentVideoTime?: React.MutableRefObject<number>;
     onCurrentTimeChange?: (time: number) => void;
+    onDurationChange?: (duration: number) => void;
     onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
@@ -29,6 +30,7 @@ export default function CustomPlayer({
     onVideoEnd,
     currentVideoTime,
     onCurrentTimeChange,
+    onDurationChange,
     onFullscreenChange,
 }: CustomPlayerProps) {
     const playerRef = useRef<unknown>(null);
@@ -36,6 +38,7 @@ export default function CustomPlayer({
     const [isPlaying, setIsPlaying] = useState(false);
     const [isShowingControls, setIsShowingControls] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [played, setPlayed] = useState(0);
     const fullscreenContainerRef = useRef<HTMLDivElement>(null);
 
     const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -137,6 +140,8 @@ export default function CustomPlayer({
 
             if (dur > 0) {
                 setPlayed(currentTime / dur);
+                // Update duration callback
+                onDurationChange?.(dur);
                 // Update ref with current time
                 if (currentVideoTime) {
                     currentVideoTime.current = currentTime;
@@ -151,7 +156,7 @@ export default function CustomPlayer({
         }, 100);
 
         return () => clearInterval(interval);
-    }, [isReady, onVideoEnd, currentVideoTime, onCurrentTimeChange]);
+    }, [isReady, onVideoEnd, currentVideoTime, onCurrentTimeChange, onDurationChange]);
 
     // Seek on initialTime
     useEffect(() => {
