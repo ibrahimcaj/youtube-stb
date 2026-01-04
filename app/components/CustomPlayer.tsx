@@ -34,21 +34,18 @@ export default function CustomPlayer({
     const playerRef = useRef<unknown>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [duration, setDuration] = useState(0);
-    const [played, setPlayed] = useState(0);
     const [isShowingControls, setIsShowingControls] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const fullscreenContainerRef = useRef<HTMLDivElement>(null);
 
-    // @ts-expect-error -- IGNORE --
     const controlsTimeoutRef = useRef<NodeJS.Timeout>();
     const [isReady, setIsReady] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     const onPlayerReady = () => {
-        console.log("Player ready!");
+        console.log("[PLAYER] Ready!");
+
         setIsReady(true);
-        setDuration(playerRef.current.getDuration());
         lastValidTimeRef.current = 0;
     };
 
@@ -61,14 +58,14 @@ export default function CustomPlayer({
         } else if (state === window.YT.PlayerState.PAUSED) {
             setIsPlaying(false);
         } else if (state === window.YT.PlayerState.ENDED) {
-            console.log("Video ended");
+            console.log("[PLAYER] Video ended, calling onVideoEnd callback.");
             onVideoEnd?.();
         }
     };
 
     const initPlayer = () => {
         if (playerRef.current || !containerRef.current) return;
-        console.log("Initializing player with video ID:", video.id);
+        console.log("[PLAYER] Initializing player with video ID:", video.id);
 
         playerRef.current = new window.YT.Player(containerRef.current, {
             height: "100%",
@@ -79,7 +76,7 @@ export default function CustomPlayer({
                 onStateChange: onPlayerStateChange,
             },
             playerVars: {
-                autoplay: 0,
+                autoplay: 1,
                 controls: 1,
                 modestbranding: 1,
                 rel: 0,
@@ -95,7 +92,7 @@ export default function CustomPlayer({
 
         // Set up callback before loading script
         window.onYouTubeIframeAPIReady = () => {
-            console.log("YouTube API ready");
+            console.log("[PLAYER] YouTube API ready.");
             if (containerRef.current && !playerRef.current) {
                 initPlayer();
             }
@@ -137,7 +134,7 @@ export default function CustomPlayer({
         const interval = setInterval(() => {
             const currentTime = playerRef.current.getCurrentTime();
             const dur = playerRef.current.getDuration();
-            setDuration(dur);
+
             if (dur > 0) {
                 setPlayed(currentTime / dur);
                 // Update ref with current time
@@ -176,36 +173,6 @@ export default function CustomPlayer({
                 setIsShowingControls(false);
             }
         }, 3000);
-    };
-
-    const formatTime = (seconds: number) => {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = Math.floor(seconds % 60);
-
-        if (hours > 0) {
-            return `${hours}:${minutes.toString().padStart(2, "0")}:${secs
-                .toString()
-                .padStart(2, "0")}`;
-        }
-        return `${minutes}:${secs.toString().padStart(2, "0")}`;
-    };
-
-    const togglePlayPause = () => {
-        if (!playerRef.current) return;
-        if (isPlaying) {
-            playerRef.current.pauseVideo();
-        } else {
-            playerRef.current.playVideo();
-        }
-    };
-
-    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newPlayed = parseFloat(e.target.value);
-        setPlayed(newPlayed);
-        if (playerRef.current) {
-            playerRef.current.seekTo(newPlayed * duration);
-        }
     };
 
     const toggleFullscreen = () => {
@@ -250,14 +217,16 @@ export default function CustomPlayer({
         <div
             ref={fullscreenContainerRef}
             className={`relative bg-black overflow-hidden group ${
-                isFullscreen ? "fixed inset-0 z-50 w-screen h-screen" : "w-full aspect-video"
+                isFullscreen
+                    ? "fixed inset-0 z-50 w-screen h-screen"
+                    : "w-full aspect-video"
             }`}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => !isPlaying && setIsShowingControls(false)}
         >
             <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
 
-            {/* Overlay to block progress bar and control interactions when playing */}
+            {/* Overlay to block interactions when playing */}
             {isPlaying && (
                 <div
                     className="absolute inset-0 pointer-events-auto"
@@ -265,14 +234,12 @@ export default function CustomPlayer({
                 />
             )}
 
-            {/* Custom Controls */}
             <div
                 className={`absolute bottom-0 left-0 right-0 bg-linear-to-t from-black via-black/50 to-transparent transition-opacity duration-300 ${
                     isShowingControls ? "opacity-100" : "opacity-0"
                 }`}
                 style={{ zIndex: 20 }}
             >
-                {/* Control Buttons */}
                 <div className="flex items-center justify-end gap-2 p-4">
                     <Button
                         onClick={toggleFullscreen}
@@ -284,8 +251,6 @@ export default function CustomPlayer({
                         <Maximize size={20} />
                     </Button>
                 </div>
-                {/* Progress Bar */}
-                <div className="h-2 w-32 bg-red-30 z-20"></div>
             </div>
 
             {/* Loading State */}
