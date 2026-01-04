@@ -260,6 +260,18 @@ export default function Home() {
     );
 }
 
+function getRelativeTime(timestamp: number): string {
+    const now = Math.floor(Date.now() / 1000);
+    const diff = now - timestamp;
+
+    if (diff < 60) return "just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    if (diff < 2592000) return `${Math.floor(diff / 604800)}w ago`;
+    return `${Math.floor(diff / 2592000)}mo ago`;
+}
+
 function VideoCard({
     video,
     classNames,
@@ -269,17 +281,22 @@ function VideoCard({
 }) {
     return (
         <div className="w-32 shrink-0 flex flex-col p-1">
-            <img
+            <Image
                 src={video.thumbnail.medium.url}
                 alt={video.title}
+                width={128}
+                height={72}
                 className={`w-full mb-2 ${classNames} aspect-video object-cover rounded-lg`}
             />
 
             <div className="text-white text-xs text-ellipsis line-clamp-2">
                 {video.title}
             </div>
-            <div className="text-neutral-400 text-xs text-ellipsis line-clamp-2">
+            <div className="text-neutral-400 text-xs text-ellipsis line-clamp-1">
                 {video.channelTitle}
+            </div>
+            <div className="text-neutral-400 text-xs">
+                {getRelativeTime(video.publishedAt)}
             </div>
         </div>
     );
