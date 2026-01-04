@@ -156,7 +156,13 @@ export default function CustomPlayer({
         }, 100);
 
         return () => clearInterval(interval);
-    }, [isReady, onVideoEnd, currentVideoTime, onCurrentTimeChange, onDurationChange]);
+    }, [
+        isReady,
+        onVideoEnd,
+        currentVideoTime,
+        onCurrentTimeChange,
+        onDurationChange,
+    ]);
 
     // Seek on initialTime
     useEffect(() => {
