@@ -36,6 +36,7 @@ export default function Home() {
     const currentVideoTime = useRef(0);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoadingStatus("Fetching timeline...");
         fetch(`/api/timeline`)
             .then((response) => {

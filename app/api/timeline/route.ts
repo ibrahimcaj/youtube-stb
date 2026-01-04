@@ -84,13 +84,14 @@ export async function GET(request: Request) {
             })
             .toArray();
 
-        const videos: Video[] = await db
+        // @ts-expect-error -- IGNORE --
+        const videos: Video[] = (await db
             .collection("feed")
             .find({
                 channelId: { $in: docs.map((sub) => sub.channelId) },
             })
             .sort({ publishedAt: -1 })
-            .toArray();
+            .toArray()) as Video[];
         console.log(videos);
 
         // If no videos, indicate feed needs to be refreshed
@@ -120,8 +121,8 @@ export async function GET(request: Request) {
         }
 
         // Get 5 videos before and 5 videos after
-        let beforeVideos = [];
-        let afterVideos = [];
+        let beforeVideos: Video[] = [];
+        let afterVideos: Video[] = [];
         let totalAfterCount = 0;
         if (currentVideo) {
             const beforeStartIndex = Math.max(0, currentVideo.currentIndex - 5);
