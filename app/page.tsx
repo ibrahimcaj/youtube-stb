@@ -38,6 +38,8 @@ export default function Home() {
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoadingStatus("Fetching timeline...");
+
+        console.log("[TIMELINE] Fetching timeline...");
         fetch(`/api/timeline`)
             .then((response) => {
                 if (response.status === 204) {
@@ -52,8 +54,8 @@ export default function Home() {
             })
             .then((response) => response.json())
             .then((data) => {
-                console.log(data);
-                console.log(data.current.timestamp);
+                console.log("[TIMELINE] Fetched timeline data:", data);
+
                 setCurrentVideo(data.current?.video || null);
                 setStartTime(data.current.timestamp);
                 setAfter(data.after || []);
@@ -61,17 +63,27 @@ export default function Home() {
                 setLoadingStatus("Loaded");
             })
             .catch((error) => {
-                console.error("Error fetching timeline:", error);
+                console.error("[TIMELINE] Error fetching timeline:", error);
                 setLoadingStatus("Error loading timeline");
             });
 
+        console.log("[SUBSCRIPTIONS] Fetching subscriptions...");
         fetch(`/api/subscriptions`)
             .then((response) => response.json())
             .then((data) => {
-                console.log(data.items);
+                console.log(
+                    "[SUBSCRIPTIONS] Fetched subscriptions:",
+                    data.items.length
+                );
+
                 setSubscriptions(data.items || []);
             })
-            .catch((error) => console.error("Error fetching timeline:", error));
+            .catch((error) =>
+                console.error(
+                    "[SUBSCRIPTIONS] Error fetching subscriptions:",
+                    error
+                )
+            );
     }, []);
 
     if (!currentVideo) {
@@ -96,9 +108,12 @@ export default function Home() {
         fetch(`/api/feed`, {
             method: "GET",
         })
-            .then(() => setIsRefreshing(false))
+            .then(() => {
+                console.log("[FEED] Feed refreshed successfully");
+                setIsRefreshing(false);
+            })
             .catch((error) => {
-                console.error("Error refreshing feed:", error);
+                console.error("[FEED] Error refreshing feed:", error);
                 setIsRefreshing(false);
             });
     }
@@ -109,12 +124,14 @@ export default function Home() {
             fetch(`/api/timeline`)
                 .then((response) => response.json())
                 .then((data) => {
+                    console.log("[TIMELINE] Re-fetched timeline data:", data);
+
                     setCurrentVideo(data.current?.video || null);
                     setStartTime(data.current.timestamp);
                     setAfter(data.after || []);
                 })
                 .catch((error) =>
-                    console.error("Error fetching timeline:", error)
+                    console.error("[TIMELINE] Error fetching timeline:", error)
                 );
         }
     };
@@ -136,7 +153,7 @@ export default function Home() {
                         isPlayerFullscreen ? "hidden" : ""
                     }`}
                 >
-                    <div className="w-screen md:w-full flex flex-row items-center overflow-x-scroll transition-opacity duration-300 opacity-100 md:opacity-0 md:group-hover:opacity-100">
+                    <div className="w-screen md:w-full flex flex-row items-center p-4 overflow-x-scroll transition-opacity duration-300 opacity-100 md:opacity-0 md:group-hover:opacity-100">
                         {/* <div className="flex flex-row gap-2">
                     {before.map((video) => (
                         <VideoCard
