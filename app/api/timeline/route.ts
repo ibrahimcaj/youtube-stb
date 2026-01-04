@@ -24,15 +24,18 @@ function getVideoAtEpoch(
     video: Video;
     currentIndex: number;
 } | null {
-    const elapsedSeconds = epoch - startTime;
+    const elapsedSeconds = epoch - startTime; // Gets the time difference from the epoch to the start time
 
-    let accumulatedTime = 0;
+    let accumulatedTime = 0; // This is used to track the total duration as we iterate through videos
     for (let i = 0; i < videos.length; i++) {
         const video = videos[i];
+
+        // Sums the accumulated time so far with the current video's duration, used to determine if the epoch falls within this video
         const videoEndTime = accumulatedTime + video.duration;
 
         if (elapsedSeconds < videoEndTime) {
-            const timestamp = elapsedSeconds - accumulatedTime;
+            // If the relative epoch time is within the current video's duration
+            const timestamp = elapsedSeconds - accumulatedTime; // Relative elapsed time minus accumulated time before this video
             return {
                 videoId: video.id,
                 timestamp,
@@ -41,12 +44,17 @@ function getVideoAtEpoch(
             };
         }
 
+        // Else, update accumulated time and continue to next video
         accumulatedTime = videoEndTime;
     }
 
     return null;
 }
 
+// GET /api/timeline
+// 1. Fetches all enabled subscriptions from database
+// 2. Fetches all videos from enabled subscriptions
+// 3. Determines the current video at the given epoch and returns surrounding videos
 export async function GET(request: Request) {
     const client = new MongoClient(mongoUri!);
 
