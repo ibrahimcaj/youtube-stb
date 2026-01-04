@@ -1,26 +1,17 @@
 import { MongoClient } from "mongodb";
-import { google } from "googleapis";
 import { Subscription } from "../route";
 
 const mongoUri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_DB;
 
-const googleClientID = process.env.GOOGLE_CLIENT_ID;
-const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-
-if (!mongoUri || !dbName || !googleClientID || !googleClientSecret) {
+if (!mongoUri || !dbName) {
     throw new Error(
         "Missing MongoDB connection string, database name, or Google OAuth credentials"
     );
 }
 
-// configure the OAuth2 client
-const oauth2Client = new google.auth.OAuth2(
-    googleClientID!,
-    googleClientSecret!,
-    "http://localhost:3000/api/oauth2callback"
-);
-
+// POST /api/subscriptions/[id]
+// Toggles the 'enabled' field of the subscription with the given channelId from path parameter
 export async function POST(request: Request) {
     const client = new MongoClient(mongoUri!);
 
@@ -31,13 +22,13 @@ export async function POST(request: Request) {
         // Get the [id] param from the request URL
         const url = new URL(request.url);
         const id = url.pathname.split("/").pop();
-        console.log("id param:", id);
 
+        // Fetch the subscription document
         const sub = await db.collection<Subscription>("subscriptions").findOne({
             channelId: id,
         });
-        console.log(sub);
 
+        // Toggle the enabled field
         await db.collection("subscriptions").updateOne(
             {
                 channelId: id,
