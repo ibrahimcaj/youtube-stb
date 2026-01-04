@@ -250,7 +250,7 @@ export default function CustomPlayer({
         <div
             ref={fullscreenContainerRef}
             className={`relative bg-black overflow-hidden group ${
-                isFullscreen ? "fixed inset-0 z-50" : "w-full aspect-video"
+                isFullscreen ? "fixed inset-0 z-50 w-screen h-screen" : "w-full aspect-video"
             }`}
             onMouseMove={handleMouseMove}
             onMouseLeave={() => !isPlaying && setIsShowingControls(false)}
