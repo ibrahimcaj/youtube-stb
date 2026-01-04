@@ -61,8 +61,6 @@ export default function CustomPlayer({
         }
     };
 
-
-
     const initPlayer = () => {
         if (playerRef.current || !containerRef.current) return;
         console.log("Initializing player with video ID:", video.id);
@@ -208,10 +206,7 @@ export default function CustomPlayer({
             onMouseMove={handleMouseMove}
             onMouseLeave={() => !isPlaying && setIsShowingControls(false)}
         >
-            <div
-                ref={containerRef}
-                style={{ width: "100%", height: "100%" }}
-            />
+            <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
 
             {/* Overlay to block progress bar and control interactions when playing */}
             {isPlaying && (
