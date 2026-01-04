@@ -7,6 +7,8 @@ if (!mongoUri || !dbName) {
     throw new Error("Missing MongoDB connection string or database name");
 }
 
+// GET /api/profiles
+// Returns the only profile in the collection
 export async function GET() {
     const client = new MongoClient(mongoUri!);
 
