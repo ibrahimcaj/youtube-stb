@@ -50,7 +50,6 @@ export async function refreshTokenIfNeeded() {
                 { upsert: true }
             );
 
-            console.log("Token refreshed successfully");
             return oauth2Client;
         }
 
