@@ -67,7 +67,7 @@ export async function GET(request: Request) {
             parseInt(url.searchParams.get("epoch") || "0") ||
             Math.floor(Date.now() / 1000);
         const startTime = parseInt(
-            url.searchParams.get("startTime") || "1767250600"
+            url.searchParams.get("startTime") || "1767596516"
         );
 
         if (!startTime) {
