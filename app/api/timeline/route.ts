@@ -67,7 +67,7 @@ export async function GET(request: Request) {
             parseInt(url.searchParams.get("epoch") || "0") ||
             Math.floor(Date.now() / 1000);
         const startTime = parseInt(
-            url.searchParams.get("startTime") || "1767596516"
+            url.searchParams.get("startTime") || "1767906120"
         );
 
         if (!startTime) {
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
             .find({
                 channelId: { $in: subscriptions.map((sub) => sub.channelId) },
             })
-            .sort({ publishedAt: -1 })
+            .sort({ publishedAt: 1 })
             .toArray();
 
         // If no videos, indicate feed needs to be refreshed

@@ -161,6 +161,8 @@ export async function GET() {
                         searchRequest
                     )) as SearchListResponse;
 
+                    console.log(videosResponse.data.items);
+
                     if (videosResponse.data.items) {
                         // Extract the video IDs from the response items
                         const videoIds = videosResponse.data.items.map(
@@ -238,7 +240,9 @@ export async function GET() {
                                     thumbnail: item.snippet.thumbnails,
                                     duration: videoDuration,
                                 };
-                                videos.push(video);
+
+                                if (videoDuration > 60 * 60 * 24 * 3)
+                                    videos.push(video);
 
                                 feedUpdates.push({
                                     updateOne: {
